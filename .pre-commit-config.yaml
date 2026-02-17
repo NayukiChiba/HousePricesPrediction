@@ -1,0 +1,22 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff (format)
+        entry: ruff format
+        language: python
+        types: [python]
+        additional_dependencies: [ruff]
+      - id: ruff
+        name: ruff (lint)
+        entry: ruff check
+        language: python
+        types: [python]
+        additional_dependencies: [ruff]
+      - id: pipreqs
+        name: pipreqs (generate requirements.txt)
+        entry: pipreqs . --force --encoding=utf-8 --mode no-pin
+        language: python
+        pass_filenames: false
+        always_run: true
+        additional_dependencies: [pipreqs]
