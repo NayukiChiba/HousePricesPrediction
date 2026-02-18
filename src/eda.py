@@ -14,30 +14,25 @@
     python -m src.eda
 """
 
-import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Any, Tuple, Optional
+from typing import Any
 
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from scipy import stats
+import pandas as pd
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import *
-
+from config import TEST_FILEPATH, TRAIN_FILEPATH
 
 # =============================================================================
 # 第一阶段：数据概览
 # =============================================================================
 
+
 def loadData(
-    trainPath: Optional[str] = TRAIN_FILEPATH,
-    testPath: Optional[str] = TEST_FILEPATH
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    trainPath: str | None = TRAIN_FILEPATH, testPath: str | None = TEST_FILEPATH
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     加载训练集和测试集
 
@@ -53,11 +48,10 @@ def loadData(
         testDf = pd.read_csv(testPath)
         return trainDf, testDf
     except Exception as e:
-        raise IOError(f"加载数据失败: {e}")
-    
+        raise OSError(f"加载数据失败: {e}")
 
 
-def getBasicInfo(df: pd.DataFrame) -> Dict[str, Any]:
+def getBasicInfo(df: pd.DataFrame) -> dict[str, Any]:
     """
     获取数据基本信息
 
@@ -82,20 +76,19 @@ def getBasicInfo(df: pd.DataFrame) -> Dict[str, Any]:
     numericCols = df.select_dtypes(include=[np.number]).columns.tolist()
     categoricalCols = df.select_dtypes(exclude=[np.number]).columns.tolist()
 
-
     # 构建字典
     result = {
-        'shape': df.shape,
-        'dtypes': df.dtypes.value_counts().to_dict(),
-        'numericCols': numericCols,
-        'categoricalCols': categoricalCols,
-        'memoryUsage': df.memory_usage(deep=True).sum() / 1024**2
+        "shape": df.shape,
+        "dtypes": df.dtypes.value_counts().to_dict(),
+        "numericCols": numericCols,
+        "categoricalCols": categoricalCols,
+        "memoryUsage": df.memory_usage(deep=True).sum() / 1024**2,
     }
 
     # 打印基本信息
     print(f"数据维度: {result['shape']}")
     print("数据类型分布:")
-    for dtype, count in result['dtypes'].items():
+    for dtype, count in result["dtypes"].items():
         print(f"  {dtype}: {count} 列")
     print(f"数值型特征数量: {len(result['numericCols'])}")
     print(f"类别型特征数量: {len(result['categoricalCols'])}")
@@ -107,7 +100,8 @@ def getBasicInfo(df: pd.DataFrame) -> Dict[str, Any]:
 # 第二阶段：目标变量分析
 # =============================================================================
 
-def analyzeTarget(df: pd.DataFrame, targetCol: str = 'SalePrice') -> Dict[str, Any]:
+
+def analyzeTarget(df: pd.DataFrame, targetCol: str = "SalePrice") -> dict[str, Any]:
     """
     分析目标变量分布
 
@@ -137,7 +131,7 @@ def analyzeTarget(df: pd.DataFrame, targetCol: str = 'SalePrice') -> Dict[str, A
     pass
 
 
-def plotTargetDistribution(df: pd.DataFrame, targetCol: str = 'SalePrice') -> None:
+def plotTargetDistribution(df: pd.DataFrame, targetCol: str = "SalePrice") -> None:
     """
     绘制目标变量分布图
 
@@ -161,6 +155,7 @@ def plotTargetDistribution(df: pd.DataFrame, targetCol: str = 'SalePrice') -> No
 # =============================================================================
 # 第三阶段：缺失值分析
 # =============================================================================
+
 
 def analyzeMissing(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -207,11 +202,10 @@ def plotMissingValues(df: pd.DataFrame, topN: int = 20) -> None:
 # 第四阶段：数值特征分析
 # =============================================================================
 
+
 def analyzeNumericFeatures(
-    df: pd.DataFrame,
-    targetCol: str = 'SalePrice',
-    topN: int = 10
-) -> Dict[str, Any]:
+    df: pd.DataFrame, targetCol: str = "SalePrice", topN: int = 10
+) -> dict[str, Any]:
     """
     分析数值特征与目标变量的关系
 
@@ -237,9 +231,7 @@ def analyzeNumericFeatures(
 
 
 def plotCorrelationHeatmap(
-    df: pd.DataFrame,
-    features: Optional[List[str]] = None,
-    targetCol: str = 'SalePrice'
+    df: pd.DataFrame, features: list[str] | None = None, targetCol: str = "SalePrice"
 ) -> None:
     """
     绘制相关性热力图
@@ -258,10 +250,7 @@ def plotCorrelationHeatmap(
 
 
 def plotScatterWithTarget(
-    df: pd.DataFrame,
-    features: List[str],
-    targetCol: str = 'SalePrice',
-    ncols: int = 3
+    df: pd.DataFrame, features: list[str], targetCol: str = "SalePrice", ncols: int = 3
 ) -> None:
     """
     绘制特征与目标变量的散点图
@@ -285,10 +274,10 @@ def plotScatterWithTarget(
 # 第五阶段：类别特征分析
 # =============================================================================
 
+
 def analyzeCategoricalFeatures(
-    df: pd.DataFrame,
-    targetCol: str = 'SalePrice'
-) -> Dict[str, Any]:
+    df: pd.DataFrame, targetCol: str = "SalePrice"
+) -> dict[str, Any]:
     """
     分析类别特征
 
@@ -315,10 +304,7 @@ def analyzeCategoricalFeatures(
 
 
 def plotCategoricalVsTarget(
-    df: pd.DataFrame,
-    features: List[str],
-    targetCol: str = 'SalePrice',
-    ncols: int = 2
+    df: pd.DataFrame, features: list[str], targetCol: str = "SalePrice", ncols: int = 2
 ) -> None:
     """
     绘制类别特征与目标变量的箱线图
@@ -343,12 +329,10 @@ def plotCategoricalVsTarget(
 # 第六阶段：异常值检测
 # =============================================================================
 
+
 def detectOutliers(
-    df: pd.DataFrame,
-    features: List[str],
-    method: str = 'iqr',
-    threshold: float = 1.5
-) -> Dict[str, List[int]]:
+    df: pd.DataFrame, features: list[str], method: str = "iqr", threshold: float = 1.5
+) -> dict[str, list[int]]:
     """
     检测异常值
 
@@ -381,8 +365,8 @@ def detectOutliers(
 def plotOutliers(
     df: pd.DataFrame,
     feature: str,
-    targetCol: str = 'SalePrice',
-    outlierIndices: Optional[List[int]] = None
+    targetCol: str = "SalePrice",
+    outlierIndices: list[int] | None = None,
 ) -> None:
     """
     绘制异常值散点图
@@ -405,7 +389,8 @@ def plotOutliers(
 # 第七阶段：特征工程建议
 # =============================================================================
 
-def suggestFeatureEngineering(df: pd.DataFrame) -> List[Dict[str, Any]]:
+
+def suggestFeatureEngineering(df: pd.DataFrame) -> list[dict[str, Any]]:
     """
     基于 EDA 结果给出特征工程建议
 
@@ -449,7 +434,10 @@ def suggestFeatureEngineering(df: pd.DataFrame) -> List[Dict[str, Any]]:
 # 主函数：运行完整 EDA 流程
 # =============================================================================
 
-def runFullEDA(saveFigures: bool = False, outputDir: Optional[str] = None) -> Dict[str, Any]:
+
+def runFullEDA(
+    saveFigures: bool = False, outputDir: str | None = None
+) -> dict[str, Any]:
     """
     运行完整的 EDA 流程
 
