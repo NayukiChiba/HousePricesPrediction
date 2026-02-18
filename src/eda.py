@@ -1,0 +1,496 @@
+"""
+探索性数据分析（EDA）模块
+
+功能：
+1. 数据概览与基本信息
+2. 目标变量分析
+3. 缺失值分析
+4. 数值特征分析
+5. 类别特征分析
+6. 异常值检测
+7. 特征工程建议
+
+使用方法：
+    python -m src.eda
+"""
+
+import os
+import sys
+from pathlib import Path
+from typing import Dict, List, Any, Tuple, Optional
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy import stats
+
+# 添加项目根目录到路径
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from config import *
+
+
+# =============================================================================
+# 第一阶段：数据概览
+# =============================================================================
+
+def loadData(
+    trainPath: Optional[str] = TRAIN_FILEPATH,
+    testPath: Optional[str] = TEST_FILEPATH
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    加载训练集和测试集
+
+    Args:
+        trainPath: 训练集路径，默认使用 config 中的路径
+        testPath: 测试集路径，默认使用 config 中的路径
+
+    Returns:
+        (trainDf, testDf) 元组
+    """
+    try:
+        trainDf = pd.read_csv(trainPath)
+        testDf = pd.read_csv(testPath)
+        return trainDf, testDf
+    except Exception as e:
+        raise IOError(f"加载数据失败: {e}")
+    
+
+
+def getBasicInfo(df: pd.DataFrame) -> Dict[str, Any]:
+    """
+    获取数据基本信息
+
+    Args:
+        df: 数据框
+
+    Returns:
+        包含以下信息的字典：
+        - shape: 数据维度 (行数, 列数)
+        - dtypes: 各列数据类型统计 (如 {'int64': 35, 'object': 43})
+        - numericCols: 数值型列名列表
+        - categoricalCols: 类别型列名列表
+        - memoryUsage: 内存占用 (MB)
+
+    提示：
+        - df.shape 获取维度
+        - df.dtypes.value_counts() 统计类型
+        - df.select_dtypes(include=[np.number]).columns 获取数值列
+        - df.memory_usage(deep=True).sum() / 1024**2 获取内存占用
+    """
+    # 获取基本信息
+    numericCols = df.select_dtypes(include=[np.number]).columns.tolist()
+    categoricalCols = df.select_dtypes(exclude=[np.number]).columns.tolist()
+
+
+    # 构建字典
+    result = {
+        'shape': df.shape,
+        'dtypes': df.dtypes.value_counts().to_dict(),
+        'numericCols': numericCols,
+        'categoricalCols': categoricalCols,
+        'memoryUsage': df.memory_usage(deep=True).sum() / 1024**2
+    }
+
+    # 打印基本信息
+    print(f"数据维度: {result['shape']}")
+    print("数据类型分布:")
+    for dtype, count in result['dtypes'].items():
+        print(f"  {dtype}: {count} 列")
+    print(f"数值型特征数量: {len(result['numericCols'])}")
+    print(f"类别型特征数量: {len(result['categoricalCols'])}")
+
+    return result
+
+
+# =============================================================================
+# 第二阶段：目标变量分析
+# =============================================================================
+
+def analyzeTarget(df: pd.DataFrame, targetCol: str = 'SalePrice') -> Dict[str, Any]:
+    """
+    分析目标变量分布
+
+    Args:
+        df: 训练数据
+        targetCol: 目标列名
+
+    Returns:
+        包含以下信息的字典：
+        - stats: 描述性统计字典，包含：
+            - mean: 均值
+            - median: 中位数
+            - std: 标准差
+            - skewness: 偏度
+            - kurtosis: 峰度
+        - isSkewed: 是否偏态（|偏度| > 0.5）
+        - suggestLogTransform: 是否建议对数变换（右偏且偏度 > 1）
+
+    提示：
+        - df[targetCol].describe() 获取基本统计
+        - df[targetCol].skew() 计算偏度
+        - df[targetCol].kurtosis() 计算峰度
+        - 绘图：plt.figure() + sns.histplot() + sns.kdeplot()
+        - Q-Q 图：stats.probplot(df[targetCol], plot=plt)
+    """
+    # TODO: 实现目标变量分析
+    pass
+
+
+def plotTargetDistribution(df: pd.DataFrame, targetCol: str = 'SalePrice') -> None:
+    """
+    绘制目标变量分布图
+
+    Args:
+        df: 训练数据
+        targetCol: 目标列名
+
+    绘制内容：
+        1. 左图：原始分布（直方图 + KDE）
+        2. 右图：对数变换后的分布
+
+    提示：
+        - fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+        - np.log1p() 进行对数变换（处理 0 值）
+        - sns.histplot(data, kde=True, ax=ax)
+    """
+    # TODO: 实现目标变量分布图
+    pass
+
+
+# =============================================================================
+# 第三阶段：缺失值分析
+# =============================================================================
+
+def analyzeMissing(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    分析缺失值情况
+
+    Args:
+        df: 数据框
+
+    Returns:
+        DataFrame，包含列：
+        - column: 列名
+        - missingCount: 缺失数量
+        - missingPercent: 缺失比例 (0-100)
+        - dtype: 数据类型
+        按 missingPercent 降序排列，只返回有缺失的列
+
+    提示：
+        - df.isnull().sum() 统计缺失数量
+        - 注意区分「真缺失」和「NA 表示无此特征」
+          例如 PoolQC 缺失可能表示没有泳池，而非数据缺失
+    """
+    # TODO: 实现缺失值分析
+    pass
+
+
+def plotMissingValues(df: pd.DataFrame, topN: int = 20) -> None:
+    """
+    绘制缺失值可视化图
+
+    Args:
+        df: 数据框
+        topN: 显示缺失最多的前 N 个特征
+
+    提示：
+        - 使用 analyzeMissing() 获取缺失值统计
+        - sns.barplot() 绘制水平条形图
+        - 添加百分比标签
+    """
+    # TODO: 实现缺失值可视化
+    pass
+
+
+# =============================================================================
+# 第四阶段：数值特征分析
+# =============================================================================
+
+def analyzeNumericFeatures(
+    df: pd.DataFrame,
+    targetCol: str = 'SalePrice',
+    topN: int = 10
+) -> Dict[str, Any]:
+    """
+    分析数值特征与目标变量的关系
+
+    Args:
+        df: 训练数据
+        targetCol: 目标列名
+        topN: 返回相关性最高的前 N 个特征
+
+    Returns:
+        包含以下信息的字典：
+        - correlations: Series，所有数值特征与目标的相关系数（降序）
+        - topFeatures: 相关性最高的 topN 个特征名列表
+        - multicollinearity: 特征间高度相关的特征对列表
+          格式：[(feat1, feat2, corr), ...]，|corr| > 0.8
+
+    提示：
+        - df.select_dtypes(include=[np.number]) 选择数值列
+        - df.corr() 计算相关矩阵
+        - corrMatrix[targetCol].sort_values(ascending=False)
+    """
+    # TODO: 实现数值特征分析
+    pass
+
+
+def plotCorrelationHeatmap(
+    df: pd.DataFrame,
+    features: Optional[List[str]] = None,
+    targetCol: str = 'SalePrice'
+) -> None:
+    """
+    绘制相关性热力图
+
+    Args:
+        df: 数据框
+        features: 要绘制的特征列表，None 则使用 top 10 相关特征
+        targetCol: 目标列名
+
+    提示：
+        - sns.heatmap(corrMatrix, annot=True, cmap='coolwarm', center=0)
+        - 设置 fmt='.2f' 显示两位小数
+    """
+    # TODO: 实现相关性热力图
+    pass
+
+
+def plotScatterWithTarget(
+    df: pd.DataFrame,
+    features: List[str],
+    targetCol: str = 'SalePrice',
+    ncols: int = 3
+) -> None:
+    """
+    绘制特征与目标变量的散点图
+
+    Args:
+        df: 数据框
+        features: 要绘制的特征列表
+        targetCol: 目标列名
+        ncols: 每行显示的图数量
+
+    提示：
+        - nrows = (len(features) + ncols - 1) // ncols 计算行数
+        - fig, axes = plt.subplots(nrows, ncols, figsize=(...))
+        - sns.scatterplot(x=feat, y=targetCol, data=df, ax=ax, alpha=0.5)
+    """
+    # TODO: 实现散点图
+    pass
+
+
+# =============================================================================
+# 第五阶段：类别特征分析
+# =============================================================================
+
+def analyzeCategoricalFeatures(
+    df: pd.DataFrame,
+    targetCol: str = 'SalePrice'
+) -> Dict[str, Any]:
+    """
+    分析类别特征
+
+    Args:
+        df: 训练数据
+        targetCol: 目标列名
+
+    Returns:
+        包含以下信息的字典：
+        - cardinality: Dict，每个类别特征的唯一值数量
+          格式：{feature_name: unique_count}
+        - highCardinality: 高基数特征列表（唯一值 > 10）
+        - lowCardinality: 低基数特征列表（唯一值 <= 10）
+        - targetMeanByCategory: Dict，每个类别特征各取值的目标均值
+          格式：{feature_name: {category: mean_target}}
+
+    提示：
+        - df.select_dtypes(include=['object']) 选择类别列
+        - df[col].nunique() 获取唯一值数量
+        - df.groupby(col)[targetCol].mean() 计算各类别的目标均值
+    """
+    # TODO: 实现类别特征分析
+    pass
+
+
+def plotCategoricalVsTarget(
+    df: pd.DataFrame,
+    features: List[str],
+    targetCol: str = 'SalePrice',
+    ncols: int = 2
+) -> None:
+    """
+    绘制类别特征与目标变量的箱线图
+
+    Args:
+        df: 数据框
+        features: 要绘制的类别特征列表
+        targetCol: 目标列名
+        ncols: 每行显示的图数量
+
+    提示：
+        - 按目标变量均值对类别排序后绘制
+        - order = df.groupby(feat)[targetCol].mean().sort_values().index
+        - sns.boxplot(x=feat, y=targetCol, data=df, order=order, ax=ax)
+        - plt.xticks(rotation=45) 旋转 x 轴标签
+    """
+    # TODO: 实现类别特征箱线图
+    pass
+
+
+# =============================================================================
+# 第六阶段：异常值检测
+# =============================================================================
+
+def detectOutliers(
+    df: pd.DataFrame,
+    features: List[str],
+    method: str = 'iqr',
+    threshold: float = 1.5
+) -> Dict[str, List[int]]:
+    """
+    检测异常值
+
+    Args:
+        df: 数据框
+        features: 要检测的特征列表
+        method: 检测方法
+            - 'iqr': 四分位距法，threshold 为 IQR 倍数（默认 1.5）
+            - 'zscore': Z-score 法，threshold 为 Z 值阈值（默认 3）
+        threshold: 阈值参数
+
+    Returns:
+        字典，key 为特征名，value 为异常值的索引列表
+
+    提示：
+        IQR 方法：
+            Q1 = df[col].quantile(0.25)
+            Q3 = df[col].quantile(0.75)
+            IQR = Q3 - Q1
+            异常：< Q1 - threshold * IQR 或 > Q3 + threshold * IQR
+
+        Z-score 方法：
+            z = (df[col] - df[col].mean()) / df[col].std()
+            异常：|z| > threshold
+    """
+    # TODO: 实现异常值检测
+    pass
+
+
+def plotOutliers(
+    df: pd.DataFrame,
+    feature: str,
+    targetCol: str = 'SalePrice',
+    outlierIndices: Optional[List[int]] = None
+) -> None:
+    """
+    绘制异常值散点图
+
+    Args:
+        df: 数据框
+        feature: 特征名
+        targetCol: 目标列名
+        outlierIndices: 异常值索引列表，None 则自动检测
+
+    提示：
+        - 正常点用蓝色，异常点用红色标记
+        - plt.scatter() 分别绘制正常点和异常点
+    """
+    # TODO: 实现异常值可视化
+    pass
+
+
+# =============================================================================
+# 第七阶段：特征工程建议
+# =============================================================================
+
+def suggestFeatureEngineering(df: pd.DataFrame) -> List[Dict[str, Any]]:
+    """
+    基于 EDA 结果给出特征工程建议
+
+    Args:
+        df: 数据框
+
+    Returns:
+        建议列表，每个建议是一个字典，包含：
+        - type: 建议类型
+            - 'combine': 组合特征
+            - 'transform': 变换特征
+            - 'encode': 编码建议
+            - 'drop': 删除建议
+        - description: 具体描述
+        - features: 涉及的特征列表
+        - code: 示例代码（可选）
+
+    常见建议（House Prices 数据集）：
+        1. 组合特征：
+           - TotalSF = TotalBsmtSF + 1stFlrSF + 2ndFlrSF
+           - TotalBath = FullBath + 0.5 * HalfBath + BsmtFullBath + 0.5 * BsmtHalfBath
+           - TotalPorchSF = OpenPorchSF + EnclosedPorch + 3SsnPorch + ScreenPorch
+
+        2. 年龄/时间特征：
+           - HouseAge = YrSold - YearBuilt
+           - RemodAge = YrSold - YearRemodAdd
+           - GarageAge = YrSold - GarageYrBlt
+
+        3. 对数变换：
+           - 对右偏特征（如 LotArea, GrLivArea）做 log1p 变换
+
+        4. 删除特征：
+           - 缺失率 > 80% 的特征
+           - 与目标相关性极低（|r| < 0.05）的特征
+    """
+    # TODO: 实现特征工程建议
+    pass
+
+
+# =============================================================================
+# 主函数：运行完整 EDA 流程
+# =============================================================================
+
+def runFullEDA(saveFigures: bool = False, outputDir: Optional[str] = None) -> Dict[str, Any]:
+    """
+    运行完整的 EDA 流程
+
+    Args:
+        saveFigures: 是否保存图表
+        outputDir: 图表保存目录，默认使用 config.OUTPUTS_DIR/eda
+
+    Returns:
+        包含所有分析结果的字典：
+        - basicInfo: 基本信息
+        - targetAnalysis: 目标变量分析
+        - missingAnalysis: 缺失值分析
+        - numericAnalysis: 数值特征分析
+        - categoricalAnalysis: 类别特征分析
+        - outliers: 异常值检测结果
+        - suggestions: 特征工程建议
+
+    流程：
+        1. 加载数据
+        2. 获取基本信息
+        3. 分析目标变量
+        4. 分析缺失值
+        5. 分析数值特征
+        6. 分析类别特征
+        7. 检测异常值
+        8. 生成特征工程建议
+    """
+    # TODO: 实现完整 EDA 流程
+    pass
+
+
+def main():
+    """主函数"""
+    print("=" * 60)
+    print("House Prices EDA 探索性数据分析")
+    print("=" * 60)
+
+    train, test = loadData()
+    print("\n[1] 数据概览")
+    getBasicInfo(train)
+
+
+if __name__ == "__main__":
+    main()
