@@ -1,1 +1,6 @@
-ÿþ
+matplotlib
+numpy
+openai
+pandas
+scipy
+seaborn

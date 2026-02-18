@@ -14,16 +14,25 @@
     python -m src.eda
 """
 
+import os
 import sys
 from pathlib import Path
 from typing import Any
 
-import numpy as np
-import pandas as pd
-
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from config import TEST_FILEPATH, TRAIN_FILEPATH
+
+import numpy as np
+import pandas as pd
+import seaborn as sns
+from matplotlib import pyplot as plt
+from scipy import stats
+
+from config import OUTPUTS_DIR, TEST_FILEPATH, TRAIN_FILEPATH
+
+# 中文字符
+plt.rcParams["font.sans-serif"] = ["SimHei"]  # 设置中文字体
+plt.rcParams["axes.unicode_minus"] = False  # 解决负号显示问题
 
 # =============================================================================
 # 第一阶段：数据概览
@@ -72,6 +81,10 @@ def getBasicInfo(df: pd.DataFrame) -> dict[str, Any]:
         - df.select_dtypes(include=[np.number]).columns 获取数值列
         - df.memory_usage(deep=True).sum() / 1024**2 获取内存占用
     """
+    # 获取全部列的基本信息
+    print("数据基本信息:")
+    print(df.info())
+
     # 获取基本信息
     numericCols = df.select_dtypes(include=[np.number]).columns.tolist()
     categoricalCols = df.select_dtypes(exclude=[np.number]).columns.tolist()
@@ -127,8 +140,40 @@ def analyzeTarget(df: pd.DataFrame, targetCol: str = "SalePrice") -> dict[str, A
         - 绘图：plt.figure() + sns.histplot() + sns.kdeplot()
         - Q-Q 图：stats.probplot(df[targetCol], plot=plt)
     """
-    # TODO: 实现目标变量分析
-    pass
+    # SalePrice 初步定为int64
+    # 计算统计量
+    target = df[targetCol]
+    skewness = target.skew()
+    kurtosis = target.kurtosis()
+
+    stats = {
+        "mean": target.mean(),
+        "median": target.median(),
+        "std": target.std(),
+        "skewness": skewness,
+        "kurtosis": kurtosis,
+    }
+
+    # 判断偏态和是否需要对数变换
+    isSkewed = abs(skewness) > 0.5
+    suggestLogTransform = skewness > 1  # 右偏且偏度 > 1
+
+    # 打印信息
+    print("描述性统计:")
+    print(target.describe())
+    print(f"偏度: {skewness:.2f}")
+    print(f"峰度: {kurtosis:.2f}")
+
+    if isSkewed:
+        print(f"⚠️ 目标变量存在偏态 (偏度={skewness:.2f})")
+    if suggestLogTransform:
+        print("💡 建议进行对数变换")
+
+    return {
+        "stats": stats,
+        "isSkewed": isSkewed,
+        "suggestLogTransform": suggestLogTransform,
+    }
 
 
 def plotTargetDistribution(df: pd.DataFrame, targetCol: str = "SalePrice") -> None:
@@ -148,8 +193,29 @@ def plotTargetDistribution(df: pd.DataFrame, targetCol: str = "SalePrice") -> No
         - np.log1p() 进行对数变换（处理 0 值）
         - sns.histplot(data, kde=True, ax=ax)
     """
-    # TODO: 实现目标变量分布图
-    pass
+    # 绘图, 主要是sns.histplot() + sns.kdeplot()
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    sns.histplot(df[targetCol], kde=True, ax=axes[0])
+    axes[0].set_title("目标变量分布")
+    sns.histplot(np.log1p(df[targetCol]), kde=True, ax=axes[1])
+    axes[1].set_title("目标变量对数变换后分布")
+    plt.tight_layout()
+    filename = "target_distribution.png"
+    VIZ_DIR = os.path.join(OUTPUTS_DIR, "eda")
+    os.makedirs(VIZ_DIR, exist_ok=True)
+    filepath = os.path.join(VIZ_DIR, filename)
+    plt.savefig(filepath)
+
+    # QQ图
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    stats.probplot(df[targetCol], plot=axes[0])
+    axes[0].set_title("原始 Q-Q 图")
+    stats.probplot(np.log1p(df[targetCol]), plot=axes[1])
+    axes[1].set_title("对数变换后 Q-Q 图")
+    plt.tight_layout()
+    filename = "target_qqplot.png"
+    filepath = os.path.join(VIZ_DIR, filename)
+    plt.savefig(filepath)
 
 
 # =============================================================================
@@ -478,6 +544,9 @@ def main():
     train, test = loadData()
     print("\n[1] 数据概览")
     getBasicInfo(train)
+
+    analyzeTarget(train)
+    plotTargetDistribution(train)
 
 
 if __name__ == "__main__":
