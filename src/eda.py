@@ -471,8 +471,26 @@ def analyzeCategoricalFeatures(
         - df[col].nunique() 获取唯一值数量
         - df.groupby(col)[targetCol].mean() 计算各类别的目标均值
     """
-    # TODO: 实现类别特征分析
-    pass
+    # 想要分析一个类别的特征, 首先需要获取所有类别特征的列名
+    # 这里的类别就是非数值的特征, 也就是 object 类型的特征
+    categoricalCols = df.select_dtypes(exclude=[np.number]).columns.tolist()
+
+    # 去除基数, 基数过高的特征不适合做类别分析, 因为每个类别的样本数量太少了
+    cardinality = {col: df[col].nunique() for col in categoricalCols}
+    # 高基数就是唯一值数量大于 10 的特征, 低基数就是唯一值数量小于等于 10 的特征
+    highCardinality = [col for col, count in cardinality.items() if count > 10]
+    lowCardinality = [col for col, count in cardinality.items() if count <= 10]
+
+    targetMeanByCategory = {}
+    for col in lowCardinality:
+        targetMeanByCategory[col] = df.groupby(col)[targetCol].mean().to_dict()
+
+    return {
+        "cardinality": cardinality,
+        "highCardinality": highCardinality,
+        "lowCardinality": lowCardinality,
+        "targetMeanByCategory": targetMeanByCategory,
+    }
 
 
 def plotCategoricalVsTarget(
@@ -493,8 +511,24 @@ def plotCategoricalVsTarget(
         - sns.boxplot(x=feat, y=targetCol, data=df, order=order, ax=ax)
         - plt.xticks(rotation=45) 旋转 x 轴标签
     """
-    # TODO: 实现类别特征箱线图
-    pass
+    nrows = (len(features) + ncols - 1) // ncols
+    fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 5 * nrows))
+    axes = axes.flatten()
+    for i, feature in enumerate(features):
+        # 获取目标变量均值排序的类别顺序
+        order = df.groupby(feature)[targetCol].mean().sort_values().index
+        sns.boxplot(x=feature, y=targetCol, data=df, order=order, ax=axes[i])
+        axes[i].set_title(f"{feature} vs {targetCol}")
+        axes[i].tick_params(axis="x", rotation=45)
+    # 隐藏多余的子图
+    for j in range(i + 1, len(axes)):
+        axes[j].set_visible(False)
+    plt.tight_layout()
+    filename = "categorical_vs_target.png"
+    VIZ_DIR = os.path.join(OUTPUTS_DIR, "eda")
+    os.makedirs(VIZ_DIR, exist_ok=True)
+    filepath = os.path.join(VIZ_DIR, filename)
+    plt.savefig(filepath)
 
 
 # =============================================================================
@@ -663,6 +697,12 @@ def main():
     print("相关性最高的特征:", numericAnalysis["topFeatures"])
     plotCorrelationHeatmap(train, numericAnalysis["topFeatures"])
     plotScatterWithTarget(train, numericAnalysis["topFeatures"])
+
+    print("\n[4] 类别特征分析")
+    categoricalAnalysis = analyzeCategoricalFeatures(train)
+    print("高基数特征:", categoricalAnalysis["highCardinality"])
+    print("低基数特征:", categoricalAnalysis["lowCardinality"])
+    plotCategoricalVsTarget(train, categoricalAnalysis["lowCardinality"])
 
 
 if __name__ == "__main__":
