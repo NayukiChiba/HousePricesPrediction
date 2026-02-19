@@ -735,6 +735,7 @@ def suggestFeatureEngineering(df: pd.DataFrame) -> list[dict[str, Any]]:
             "code": ("df['GarageAge'] = df['YrSold'] - df['GarageYrBlt']"),
         }
     )
+    return suggestions
 
 
 # =============================================================================
