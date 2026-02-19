@@ -353,8 +353,28 @@ def analyzeNumericFeatures(
         - df.corr() 计算相关矩阵
         - corrMatrix[targetCol].sort_values(ascending=False)
     """
-    # TODO: 实现数值特征分析
-    pass
+    # 获取数值列
+    numericCols = df.select_dtypes(include=[np.number]).columns.tolist()
+    # 计算相关矩阵
+    corrMatrix = df[numericCols].corr()
+    # 获取与目标变量的相关系数，并排序
+    correlations = corrMatrix[targetCol].sort_values(ascending=False)
+    # 获取相关性最高的 topN 个特征（排除目标列本身）
+    topFeatures = correlations.index[1 : topN + 1].tolist()  # 排除目标列本身
+    # 检测多重共线性，找出相关性 > 0.8 的特征对
+    multicollinearity = []
+    for i in range(len(numericCols)):
+        for j in range(i + 1, len(numericCols)):
+            feat1 = numericCols[i]
+            feat2 = numericCols[j]
+            corr = corrMatrix.loc[feat1, feat2]
+            if abs(corr) > 0.8:
+                multicollinearity.append((feat1, feat2, corr))
+    return {
+        "correlations": correlations,
+        "topFeatures": topFeatures,
+        "multicollinearity": multicollinearity,
+    }
 
 
 def plotCorrelationHeatmap(
@@ -372,8 +392,20 @@ def plotCorrelationHeatmap(
         - sns.heatmap(corrMatrix, annot=True, cmap='coolwarm', center=0)
         - 设置 fmt='.2f' 显示两位小数
     """
-    # TODO: 实现相关性热力图
-    pass
+    if features is None:
+        features = analyzeNumericFeatures(df, targetCol)["topFeatures"]
+    # 包含目标列和选定特征
+    colsToPlot = [targetCol] + features
+    corrMatrix = df[colsToPlot].corr()
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(corrMatrix, annot=True, cmap="coolwarm", center=0, fmt=".2f")
+    plt.title("相关性热力图")
+    plt.tight_layout()
+    filename = "correlation_heatmap.png"
+    VIZ_DIR = os.path.join(OUTPUTS_DIR, "eda")
+    os.makedirs(VIZ_DIR, exist_ok=True)
+    filepath = os.path.join(VIZ_DIR, filename)
+    plt.savefig(filepath)
 
 
 def plotScatterWithTarget(
@@ -393,8 +425,21 @@ def plotScatterWithTarget(
         - fig, axes = plt.subplots(nrows, ncols, figsize=(...))
         - sns.scatterplot(x=feat, y=targetCol, data=df, ax=ax, alpha=0.5)
     """
-    # TODO: 实现散点图
-    pass
+    nrows = (len(features) + ncols - 1) // ncols
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 4 * nrows))
+    axes = axes.flatten()
+    for i, feature in enumerate(features):
+        sns.scatterplot(x=feature, y=targetCol, data=df, ax=axes[i], alpha=0.5)
+        axes[i].set_title(f"{feature} vs {targetCol}")
+    # 隐藏多余的子图
+    for j in range(i + 1, len(axes)):
+        axes[j].set_visible(False)
+    plt.tight_layout()
+    filename = "scatter_with_target.png"
+    VIZ_DIR = os.path.join(OUTPUTS_DIR, "eda")
+    os.makedirs(VIZ_DIR, exist_ok=True)
+    filepath = os.path.join(VIZ_DIR, filename)
+    plt.savefig(filepath)
 
 
 # =============================================================================
@@ -612,6 +657,12 @@ def main():
     print("\n[2] 缺失值分析")
     print(analyzeMissing(train))
     plotMissingValues(train)
+
+    print("\n[3] 数值特征分析")
+    numericAnalysis = analyzeNumericFeatures(train)
+    print("相关性最高的特征:", numericAnalysis["topFeatures"])
+    plotCorrelationHeatmap(train, numericAnalysis["topFeatures"])
+    plotScatterWithTarget(train, numericAnalysis["topFeatures"])
 
 
 if __name__ == "__main__":
