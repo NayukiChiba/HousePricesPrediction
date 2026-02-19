@@ -564,8 +564,25 @@ def detectOutliers(
             z = (df[col] - df[col].mean()) / df[col].std()
             异常：|z| > threshold
     """
-    # TODO: 实现异常值检测
-    pass
+    outlierIndices = {}
+    for feature in features:
+        if method == "iqr":
+            Q1 = df[feature].quantile(0.25)
+            Q3 = df[feature].quantile(0.75)
+            IQR = Q3 - Q1
+            lowerBound = Q1 - threshold * IQR
+            upperBound = Q3 + threshold * IQR
+            outliers = df[
+                (df[feature] < lowerBound) | (df[feature] > upperBound)
+            ].index.tolist()
+            outlierIndices[feature] = outliers
+        elif method == "zscore":
+            z = (df[feature] - df[feature].mean()) / df[feature].std()
+            outliers = df[np.abs(z) > threshold].index.tolist()
+            outlierIndices[feature] = outliers
+        else:
+            raise ValueError(f"未知的异常值检测方法: {method}")
+    return outlierIndices
 
 
 def plotOutliers(
@@ -587,8 +604,35 @@ def plotOutliers(
         - 正常点用蓝色，异常点用红色标记
         - plt.scatter() 分别绘制正常点和异常点
     """
-    # TODO: 实现异常值可视化
-    pass
+    if outlierIndices is None:
+        outlierIndices = detectOutliers(df, [feature])  # 自动检测异常值
+    normalData = df.drop(index=outlierIndices)
+    outlierData = df.loc[outlierIndices]
+    plt.figure(figsize=(8, 6))
+    plt.scatter(
+        normalData[feature],
+        normalData[targetCol],
+        color="blue",
+        alpha=0.5,
+        label="正常点",
+    )
+    plt.scatter(
+        outlierData[feature],
+        outlierData[targetCol],
+        color="red",
+        alpha=0.5,
+        label="异常点",
+    )
+    plt.xlabel(feature)
+    plt.ylabel(targetCol)
+    plt.title(f"{feature} vs {targetCol}（异常值标记）")
+    plt.legend()
+    plt.tight_layout()
+    filename = f"outliers_{feature}.png"
+    VIZ_DIR = os.path.join(OUTPUTS_DIR, "eda", "outliers")
+    os.makedirs(VIZ_DIR, exist_ok=True)
+    filepath = os.path.join(VIZ_DIR, filename)
+    plt.savefig(filepath)
 
 
 # =============================================================================
@@ -703,6 +747,12 @@ def main():
     print("高基数特征:", categoricalAnalysis["highCardinality"])
     print("低基数特征:", categoricalAnalysis["lowCardinality"])
     plotCategoricalVsTarget(train, categoricalAnalysis["lowCardinality"])
+
+    print("\n[5] 异常值检测")
+    outliers = detectOutliers(train, numericAnalysis["topFeatures"])
+    for feature, indices in outliers.items():
+        print(f"{feature} 的异常值索引: {indices}")
+        plotOutliers(train, feature, outlierIndices=indices)
 
 
 if __name__ == "__main__":
