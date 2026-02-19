@@ -676,47 +676,70 @@ def suggestFeatureEngineering(df: pd.DataFrame) -> list[dict[str, Any]]:
            - 缺失率 > 80% 的特征
            - 与目标相关性极低（|r| < 0.05）的特征
     """
-    # TODO: 实现特征工程建议
-    pass
+    suggestions = []
+
+    # 组合特征建议
+    suggestions.append(
+        {
+            "type": "combine",
+            "description": "创建总面积特征 TotalSF",
+            "features": ["TotalBsmtSF", "1stFlrSF", "2ndFlrSF"],
+            "code": "df['TotalSF'] = df['TotalBsmtSF'] + df['1stFlrSF'] + df['2ndFlrSF']",
+        }
+    )
+    suggestions.append(
+        {
+            "type": "combine",
+            "description": "创建总浴室数特征 TotalBath",
+            "features": ["FullBath", "HalfBath", "BsmtFullBath", "BsmtHalfBath"],
+            "code": (
+                "df['TotalBath'] = df['FullBath'] + 0.5 * df['HalfBath'] + "
+                "df['BsmtFullBath'] + 0.5 * df['BsmtHalfBath']"
+            ),
+        }
+    )
+    suggestions.append(
+        {
+            "type": "combine",
+            "description": "创建总门廊面积特征 TotalPorchSF",
+            "features": ["OpenPorchSF", "EnclosedPorch", "3SsnPorch", "ScreenPorch"],
+            "code": (
+                "df['TotalPorchSF'] = df['OpenPorchSF'] + df['EnclosedPorch'] + "
+                "df['3SsnPorch'] + df['ScreenPorch']"
+            ),
+        }
+    )
+
+    # 年龄/时间特征建议
+    suggestions.append(
+        {
+            "type": "transform",
+            "description": "创建房屋年龄特征 HouseAge",
+            "features": ["YrSold", "YearBuilt"],
+            "code": "df['HouseAge'] = df['YrSold'] - df['YearBuilt']",
+        }
+    )
+    suggestions.append(
+        {
+            "type": "transform",
+            "description": "创建翻新年龄特征 RemodAge",
+            "features": ["YrSold", "YearRemodAdd"],
+            "code": ("df['RemodAge'] = df['YrSold'] - df['YearRemodAdd']"),
+        }
+    )
+    suggestions.append(
+        {
+            "type": "transform",
+            "description": "创建车库年龄特征 GarageAge",
+            "features": ["YrSold", "GarageYrBlt"],
+            "code": ("df['GarageAge'] = df['YrSold'] - df['GarageYrBlt']"),
+        }
+    )
 
 
 # =============================================================================
 # 主函数：运行完整 EDA 流程
 # =============================================================================
-
-
-def runFullEDA(
-    saveFigures: bool = False, outputDir: str | None = None
-) -> dict[str, Any]:
-    """
-    运行完整的 EDA 流程
-
-    Args:
-        saveFigures: 是否保存图表
-        outputDir: 图表保存目录，默认使用 config.OUTPUTS_DIR/eda
-
-    Returns:
-        包含所有分析结果的字典：
-        - basicInfo: 基本信息
-        - targetAnalysis: 目标变量分析
-        - missingAnalysis: 缺失值分析
-        - numericAnalysis: 数值特征分析
-        - categoricalAnalysis: 类别特征分析
-        - outliers: 异常值检测结果
-        - suggestions: 特征工程建议
-
-    流程：
-        1. 加载数据
-        2. 获取基本信息
-        3. 分析目标变量
-        4. 分析缺失值
-        5. 分析数值特征
-        6. 分析类别特征
-        7. 检测异常值
-        8. 生成特征工程建议
-    """
-    # TODO: 实现完整 EDA 流程
-    pass
 
 
 def main():
@@ -753,6 +776,15 @@ def main():
     for feature, indices in outliers.items():
         print(f"{feature} 的异常值索引: {indices}")
         plotOutliers(train, feature, outlierIndices=indices)
+
+    print("\n[6] 特征工程建议")
+    suggestions = suggestFeatureEngineering(train)
+    for suggestion in suggestions:
+        print(f"建议类型: {suggestion['type']}")
+        print(f"描述: {suggestion['description']}")
+        print(f"涉及特征: {suggestion['features']}")
+        print(f"示例代码:\n{suggestion['code']}\n")
+        print("-" * 40)
 
 
 if __name__ == "__main__":
