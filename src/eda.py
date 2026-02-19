@@ -243,8 +243,31 @@ def analyzeMissing(df: pd.DataFrame) -> pd.DataFrame:
         - 注意区分「真缺失」和「NA 表示无此特征」
           例如 PoolQC 缺失可能表示没有泳池，而非数据缺失
     """
-    # TODO: 实现缺失值分析
-    pass
+    # 缺失布尔矩阵
+    missingCount = df.isnull().sum()
+
+    # 缺失比例
+    missingPercent = (missingCount / len(df)) * 100
+
+    # 构建DataFrame
+    missingDf = pd.DataFrame(
+        {
+            "columns": missingCount.index,
+            "missingCount": missingCount.values,
+            "missingPercent": missingPercent.values,
+            "dtype": df.dtypes.values,
+        }
+    )
+
+    # 筛选，只需要缺失 > 0的列
+    missingDf = missingDf[missingDf["missingCount"] > 0]
+
+    # 排序, 并且重置索引
+    missingDf = missingDf.sort_values(by="missingPercent", ascending=False).reset_index(
+        drop=True
+    )
+
+    return missingDf
 
 
 def plotMissingValues(df: pd.DataFrame, topN: int = 20) -> None:
@@ -260,8 +283,46 @@ def plotMissingValues(df: pd.DataFrame, topN: int = 20) -> None:
         - sns.barplot() 绘制水平条形图
         - 添加百分比标签
     """
-    # TODO: 实现缺失值可视化
-    pass
+    missing = analyzeMissing(df)
+
+    # 取前 topN 个
+    plotDf = missing.head(topN)
+
+    # 如果没有缺失值, 直接返回
+    if len(plotDf) == 0:
+        print("没有缺失值需要可视化")
+        return
+
+    # 绘制水平条形图
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.barplot(
+        x="missingPercent",
+        y="columns",
+        data=plotDf,
+        ax=ax,
+        hue="columns",  # 添加这行
+        palette="viridis",
+        legend=False,  # 添加这行，不显示图例
+    )
+
+    # 添加百分比标签
+    for i, (percent, count) in enumerate(
+        zip(plotDf["missingPercent"], plotDf["missingCount"])
+    ):
+        ax.text(percent + 0.5, i, f"{percent:.1f}% ({count})", va="center")
+
+    ax.set_xlabel("缺失比例 (%)")
+    ax.set_ylabel("特征")
+    ax.set_title(f"缺失值分布（前 {topN} 个）")
+
+    plt.tight_layout()
+
+    # 保存图表
+    filename = "missing_values.png"
+    VIZ_DIR = os.path.join(OUTPUTS_DIR, "eda")
+    os.makedirs(VIZ_DIR, exist_ok=True)
+    filepath = os.path.join(VIZ_DIR, filename)
+    plt.savefig(filepath)
 
 
 # =============================================================================
@@ -547,6 +608,10 @@ def main():
 
     analyzeTarget(train)
     plotTargetDistribution(train)
+
+    print("\n[2] 缺失值分析")
+    print(analyzeMissing(train))
+    plotMissingValues(train)
 
 
 if __name__ == "__main__":
