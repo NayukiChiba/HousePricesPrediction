@@ -29,7 +29,16 @@ from sklearn.preprocessing import StandardScaler
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from config import MODEL_DIR, OUTPUTS_DIR, TRAIN_PROCESSED_FILEPATH
+from config import (
+    MODEL_FILEPATH,
+    N_SPLITS,
+    RANDOM_STATE,
+    RIDGE_ALPHA,
+    TARGET_COL,
+    TRAIN_PROCESSED_FILEPATH,
+    TRAIN_REPORT_FILEPATH,
+    USE_LOG_TARGET,
+)
 
 # =============================================================================
 # 第一阶段：评估指标
@@ -244,22 +253,19 @@ def saveArtifacts(model: Pipeline, report: dict[str, Any]) -> None:
         - 模型：outputs/model/ridge_pipeline_v1.joblib
         - 报告：outputs/train/train_report.json
     """
-    # 1) 模型目录
-    os.makedirs(MODEL_DIR, exist_ok=True)
+    # 1) 确保模型目录存在
+    os.makedirs(os.path.dirname(MODEL_FILEPATH), exist_ok=True)
 
     # 2) 保存模型对象（joblib 适合 sklearn）
-    modelPath = os.path.join(MODEL_DIR, "ridge_pipeline_v1.joblib")
-    dump(model, modelPath)
+    dump(model, MODEL_FILEPATH)
 
     # 3) 保存训练报告
-    trainReportDir = os.path.join(OUTPUTS_DIR, "train")
-    os.makedirs(trainReportDir, exist_ok=True)
-    reportPath = os.path.join(trainReportDir, "train_report.json")
-    with open(reportPath, "w", encoding="utf-8") as f:
+    os.makedirs(os.path.dirname(TRAIN_REPORT_FILEPATH), exist_ok=True)
+    with open(TRAIN_REPORT_FILEPATH, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
 
-    print(f"模型已保存: {modelPath}")
-    print(f"训练报告已保存: {reportPath}")
+    print(f"模型已保存: {MODEL_FILEPATH}")
+    print(f"训练报告已保存: {TRAIN_REPORT_FILEPATH}")
 
 
 # =============================================================================
@@ -282,11 +288,11 @@ def main() -> None:
     print("=" * 60)
 
     # 训练配置（学习版先写死，后续可改成 argparse）
-    targetCol = "SalePrice"
-    randomState = 42
-    nSplits = 5
-    useLogTarget = True
-    alpha = 1.0
+    targetCol = TARGET_COL
+    randomState = RANDOM_STATE
+    nSplits = N_SPLITS
+    useLogTarget = USE_LOG_TARGET
+    alpha = RIDGE_ALPHA
 
     print("[1] 加载处理后训练数据...")
     xDf, y = loadTrainData(targetCol=targetCol)
