@@ -23,7 +23,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pandas as pd
 
-from config import OUTPUTS_DIR, TEST_FILEPATH, TRAIN_FILEPATH
+from config import (
+    OUTPUTS_DIR,
+    TEST_FILEPATH,
+    TEST_PROCESSED_FILEPATH,
+    TRAIN_FILEPATH,
+    TRAIN_PROCESSED_FILEPATH,
+)
 
 
 class FeatureEngineer:
@@ -416,16 +422,15 @@ def main() -> None:
     trainProcessedDf, testProcessedDf = runFeatureEngineering(trainDf, testDf)
 
     print("[3] 保存结果...")
-    trainOutPath = os.path.join(outputDir, "train_processed.csv")
-    testOutPath = os.path.join(outputDir, "test_processed.csv")
+    os.makedirs(os.path.dirname(TRAIN_PROCESSED_FILEPATH), exist_ok=True)
 
-    trainProcessedDf.to_csv(trainOutPath, index=False)
-    testProcessedDf.to_csv(testOutPath, index=False)
+    trainProcessedDf.to_csv(TRAIN_PROCESSED_FILEPATH, index=False)
+    testProcessedDf.to_csv(TEST_PROCESSED_FILEPATH, index=False)
 
     print(f"训练集处理后形状: {trainProcessedDf.shape}")
     print(f"测试集处理后形状: {testProcessedDf.shape}")
-    print(f"训练集输出: {trainOutPath}")
-    print(f"测试集输出: {testOutPath}")
+    print(f"训练集输出: {TRAIN_PROCESSED_FILEPATH}")
+    print(f"测试集输出: {TEST_PROCESSED_FILEPATH}")
 
 
 if __name__ == "__main__":
