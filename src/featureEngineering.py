@@ -101,28 +101,26 @@ class FeatureEngineer:
                 str(modeSeries.iloc[0]) if not modeSeries.empty else "Missing"
             )
 
-            # 类别水平编码: Label Encoding
-            self.categoricalLevels = {}
-            for col in categoricalCols:
-                vals = featureDf[col].dropna().astype(str).unique().tolist()
-                self.categoricalLevels[col] = sorted(vals)  # 按字母顺序排序类别水平
+        # 类别水平映射（保留供元信息与后续分析）
+        self.categoricalLevels = {}
+        for col in categoricalCols:
+            vals = featureDf[col].dropna().astype(str).unique().tolist()
+            self.categoricalLevels[col] = sorted(vals)
 
-            # 偏态列记录：偏态特征通常需要对数变换等处理
-            self.logTransformCols = []
-            for col in numericCols:
-                # 计算偏态系数（skewness），绝对值大于0.75且最小值非负的数值列可能需要对数变换
-                colSeries = featureDf[col].dropna()
-                if colSeries.empty:
-                    continue
-                skewness = colSeries.skew()
-                # 仅当偏态系数存在且绝对值大于0.75且最小值非负时，才考虑对数变换
-                if pd.notna(skewness) and abs(skewness) > 0.75 and colSeries.min() >= 0:
-                    self.logTransformCols.append(col)
+        # 偏态列记录：偏态特征通常需要对数变换等处理
+        self.logTransformCols = []
+        for col in numericCols:
+            # 计算偏态系数（skewness），绝对值大于0.75且最小值非负的数值列可能需要对数变换
+            colSeries = featureDf[col].dropna()
+            if colSeries.empty:
+                continue
+            skewness = colSeries.skew()
+            # 仅当偏态系数存在且绝对值大于0.75且最小值非负时，才考虑对数变换
+            if pd.notna(skewness) and abs(skewness) > 0.75 and colSeries.min() >= 0:
+                self.logTransformCols.append(col)
 
-            self.isFitted = True
-
-            # TODO: 用训练集跑一次完整的流程，确保所有步骤的配置都正确
-            pass
+        self.isFitted = True
+        return self
 
     def transform(self, df: pd.DataFrame, isTrain: bool = False) -> pd.DataFrame:
         """

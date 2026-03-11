@@ -20,6 +20,11 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from joblib import dump
+from sklearn.ensemble import (
+    GradientBoostingRegressor,
+    RandomForestRegressor,
+    VotingRegressor,
+)
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import KFold
@@ -41,6 +46,21 @@ RANDOM_STATE = 42
 N_SPLITS = 5
 USE_LOG_TARGET = True
 RIDGE_ALPHA = 1.0
+
+# 更强模型：Ridge + RandomForest + GradientBoosting 融合
+RF_N_ESTIMATORS = 900
+RF_MAX_DEPTH = None
+RF_MIN_SAMPLES_SPLIT = 2
+RF_MIN_SAMPLES_LEAF = 1
+
+GB_N_ESTIMATORS = 3000
+GB_LEARNING_RATE = 0.01
+GB_MAX_DEPTH = 3
+GB_SUBSAMPLE = 0.8
+
+WEIGHT_RIDGE = 0.25
+WEIGHT_RF = 0.35
+WEIGHT_GB = 0.40
 
 # =============================================================================
 # 第一阶段：评估指标
@@ -82,24 +102,48 @@ def rmsle(yTrue: np.ndarray, yPred: np.ndarray) -> float:
 # =============================================================================
 
 
-def buildModel(alpha: float = 1.0) -> Pipeline:
+def buildModel(alpha: float = 1.0, randomState: int = 42) -> VotingRegressor:
     """
     构建 sklearn 模型管道。
 
-    Pipeline 结构：
-        1) StandardScaler：标准化特征，避免某些数值范围过大主导优化。
-        2) Ridge：线性回归 + L2 正则，降低过拟合风险。
+    融合结构：
+        1) ridge: Pipeline(StandardScaler + Ridge)
+        2) rf: RandomForestRegressor
+        3) gb: GradientBoostingRegressor
+
+    使用 VotingRegressor 做加权融合，通常比单一 Ridge 更稳健。
 
     Args:
         alpha: Ridge 正则强度，越大约束越强。
     """
-    model = Pipeline(
+    ridge = Pipeline(
         steps=[
-            # 对每个特征做 z-score 标准化：(x - mean) / std
             ("scaler", StandardScaler()),
-            # 线性模型：在最小二乘基础上加入 L2 正则项
-            ("regressor", Ridge(alpha=alpha, random_state=42)),
+            ("regressor", Ridge(alpha=alpha, random_state=randomState)),
         ]
+    )
+
+    rf = RandomForestRegressor(
+        n_estimators=RF_N_ESTIMATORS,
+        max_depth=RF_MAX_DEPTH,
+        min_samples_split=RF_MIN_SAMPLES_SPLIT,
+        min_samples_leaf=RF_MIN_SAMPLES_LEAF,
+        random_state=randomState,
+        n_jobs=-1,
+    )
+
+    gb = GradientBoostingRegressor(
+        n_estimators=GB_N_ESTIMATORS,
+        learning_rate=GB_LEARNING_RATE,
+        max_depth=GB_MAX_DEPTH,
+        subsample=GB_SUBSAMPLE,
+        random_state=randomState,
+    )
+
+    model = VotingRegressor(
+        estimators=[("ridge", ridge), ("rf", rf), ("gb", gb)],
+        weights=[WEIGHT_RIDGE, WEIGHT_RF, WEIGHT_GB],
+        n_jobs=-1,
     )
     return model
 
@@ -177,7 +221,7 @@ def crossValidate(
         yTrain, yValid = yArr[trainIdx], yArr[validIdx]
 
         # 每一折都重新创建并训练模型，防止信息泄漏
-        model = buildModel(alpha=alpha)
+        model = buildModel(alpha=alpha, randomState=randomState)
 
         if useLogTarget:
             # 在训练阶段对 y 做 log1p，可缓解长尾分布
@@ -225,7 +269,7 @@ def trainFinalModel(
     y: pd.Series,
     useLogTarget: bool = True,
     alpha: float = 1.0,
-) -> Pipeline:
+) -> VotingRegressor:
     """
     在全量训练集上训练最终模型。
 
@@ -236,7 +280,7 @@ def trainFinalModel(
     """
     x = xDf.values.astype(np.float64)
     yArr = y.values.astype(np.float64)
-    model = buildModel(alpha=alpha)
+    model = buildModel(alpha=alpha, randomState=RANDOM_STATE)
 
     if useLogTarget:
         yFit = np.log1p(np.clip(yArr, a_min=0, a_max=None))
@@ -247,7 +291,7 @@ def trainFinalModel(
     return model
 
 
-def saveArtifacts(model: Pipeline, report: dict[str, Any]) -> None:
+def saveArtifacts(model: VotingRegressor, report: dict[str, Any]) -> None:
     """
     保存模型与训练报告。
 
@@ -318,9 +362,26 @@ def main() -> None:
     print("[4] 保存模型与报告...")
     # 报告中记录关键训练参数，方便复现实验
     report = {
-        "modelType": "Pipeline(StandardScaler + Ridge)",
+        "modelType": "VotingRegressor(Ridge + RandomForest + GradientBoosting)",
         "alpha": alpha,
         "useLogTarget": useLogTarget,
+        "weights": {
+            "ridge": WEIGHT_RIDGE,
+            "rf": WEIGHT_RF,
+            "gb": WEIGHT_GB,
+        },
+        "rfParams": {
+            "n_estimators": RF_N_ESTIMATORS,
+            "max_depth": RF_MAX_DEPTH,
+            "min_samples_split": RF_MIN_SAMPLES_SPLIT,
+            "min_samples_leaf": RF_MIN_SAMPLES_LEAF,
+        },
+        "gbParams": {
+            "n_estimators": GB_N_ESTIMATORS,
+            "learning_rate": GB_LEARNING_RATE,
+            "max_depth": GB_MAX_DEPTH,
+            "subsample": GB_SUBSAMPLE,
+        },
         "featureCols": xDf.columns.tolist(),
         "targetCol": targetCol,
         "nSplits": nSplits,

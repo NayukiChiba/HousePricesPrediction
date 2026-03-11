@@ -27,9 +27,9 @@ TEST_PROCESSED_FILEPATH = os.path.join(
 )
 
 # 训练/预测相关文件
-MODEL_FILENAME = "ridge_pipeline_v1.joblib"
+MODEL_FILENAME = "ensemble_v2.joblib"
 TRAIN_REPORT_FILENAME = "train_report.json"
-SUBMISSION_FILENAME = "submission_v1.csv"
+SUBMISSION_FILENAME = "submission_v2.csv"
 
 MODEL_FILEPATH = os.path.join(MODEL_DIR, MODEL_FILENAME)
 TRAIN_REPORT_FILEPATH = os.path.join(TRAIN_OUTPUT_DIR, TRAIN_REPORT_FILENAME)

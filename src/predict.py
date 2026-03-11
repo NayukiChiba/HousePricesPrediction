@@ -20,7 +20,6 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from joblib import load
-from sklearn.pipeline import Pipeline
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -38,8 +37,8 @@ from config import (
 # =============================================================================
 
 
-def loadModel(modelPath: str = MODEL_FILEPATH) -> Pipeline:
-    """加载训练好的 sklearn Pipeline 模型。"""
+def loadModel(modelPath: str = MODEL_FILEPATH) -> Any:
+    """加载训练好的 sklearn 模型对象（可为 Pipeline/Ensemble）。"""
     if not os.path.exists(modelPath):
         raise FileNotFoundError(
             f"未找到模型文件: {modelPath}，请先运行 `python -m src.train`"
@@ -118,7 +117,7 @@ def loadSubmissionIds() -> pd.Series:
 
 
 def predictSalePrice(
-    model: Pipeline,
+    model: Any,
     xTestAligned: pd.DataFrame,
     useLogTarget: bool = True,
 ) -> np.ndarray:
