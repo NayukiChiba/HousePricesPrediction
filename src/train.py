@@ -31,14 +31,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from config import (
     MODEL_FILEPATH,
-    N_SPLITS,
-    RANDOM_STATE,
-    RIDGE_ALPHA,
-    TARGET_COL,
     TRAIN_PROCESSED_FILEPATH,
     TRAIN_REPORT_FILEPATH,
-    USE_LOG_TARGET,
 )
+
+# 训练参数放在训练脚本本地，不放在全局 config.py
+TARGET_COL = "SalePrice"
+RANDOM_STATE = 42
+N_SPLITS = 5
+USE_LOG_TARGET = True
+RIDGE_ALPHA = 1.0
 
 # =============================================================================
 # 第一阶段：评估指标
