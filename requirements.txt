@@ -1,6 +1,7 @@
 matplotlib
 numpy
-openai
 pandas
 scipy
 seaborn
+scikit-learn
+joblib
